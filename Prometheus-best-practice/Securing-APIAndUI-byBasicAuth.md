@@ -16,7 +16,7 @@
 
 
 
-### 二： 设置哈希密码
+### 二： 设置登录用户和密码
 
 访问 Prometheus 实例的所有用户都需要用户名和密码。密码需要加盐加密，我们使用python工具进行生成
 
@@ -47,7 +47,7 @@
 
  
 
-### 二：prometheus 二进制部署添加basic auth
+### 三：prometheus 二进制部署添加basic auth
 
 1. 创建web.yml
 
@@ -86,7 +86,7 @@
 
 
 
-### 三: 容器化部署如何添加basic auth
+### 四: 容器化部署如何添加basic auth
 
 可以看到能直接访问到prometheus 的queryAPI和UI界面
 
@@ -168,10 +168,12 @@
    容器化部署的prometheus 修改逻辑其实和二进制相同。将对应的basic auth 信息传递给prometheus，然后启动加载就可以了。
 
    期间踩过坑，版本低的prometheus 加载失败，会打印错误日志: ` unknow long flag '--web.config.file'`
+   
+   
 
-#### 
 
-### 四: kube-prometheus形态添加basic auth
+
+### 五: kube-prometheus形态添加basic auth
 
 当前在k8s 部署prometheus 大都选择kube-prometheus这种形式，配置文件的变更都是交由crd进行管理。统一由prometheus-operator进行识别转换
 

@@ -12,4 +12,11 @@ Prometheus学习记录以及最佳实践
    https://github.com/HFfleming/prometheus-study/blob/main/Prometheus-best-practice/update-metricsName-provideByKSM.md
    
    
+   
+   
+   
+   
 
+2. 【prometheus 安全配置】不同部署形态的Prometheus如何配置Basic Auth
+
+   https://github.com/HFfleming/prometheus-study/blob/main/Prometheus-best-practice/Securing-APIAndUI-byBasicAuth.md
