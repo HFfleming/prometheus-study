@@ -92,9 +92,11 @@
 
 
 
-### 四: 容器化部署如何添加basic auth
+### 四:(重点配置)容器化部署如何添加basic auth
 
-可以看到能直接访问到prometheus 的queryAPI和UI界面
+
+
+默认能直接访问到prometheus 的queryAPI和UI界面
 
 ![image-20230817170721016](./assets/image-20230817170721016.png)
 
@@ -466,7 +468,7 @@
 
 ---
 
-### 八: Prometheus BasicAuth 可以添加多用户
+### 八: Prometheus BasicAuth 添加多用户
 
 现实场景下,prometheus的baisc auth信息可能存在多个。
 
