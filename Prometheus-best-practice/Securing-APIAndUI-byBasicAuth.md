@@ -1,4 +1,6 @@
-### 一: Prometheus Basic Auth
+### 一:Prometheus Basic Auth
+
+
 
 背景: 在日常prometheus的使用中是没有安全加密措施的，不安全。指标信息直接暴露在公网上了。
 
@@ -16,9 +18,15 @@
 
 
 
-### 二： 设置登录用户和密码
+---
 
-访问 Prometheus 实例的所有用户都需要用户名和密码。密码需要加盐加密，我们使用python工具进行生成
+
+
+### 二: 准备工作
+
+
+
+访问 Prometheus 实例的所有鉴权用户都需要密码。密码需要加盐加密，我们使用python工具进行生成
 
 1. 安装python环境
 
@@ -51,48 +59,7 @@
 
 
 
-### 三：prometheus 二进制部署添加basic auth
-
-1. 创建web.yml
-
-   ```yml
-   basic_auth_users:
-     admin: $2b$12$kXxrZP74Fmjh6Wih0Ignu.uWSiojl5aKj4UnMvHN9s2h/Lc/ui0.S
-   ```
-
-   ![image-20230817144833637](./assets/image-20230817144833637.png)
-
-
-
-2. 启动prometheus
-
-   `./prometheus  --web.config.file=webconfig.yml --config.file=prometheus.yml`
-
-   其中 --web.config.file=webconfig.yml 为关键配置，prometheus 启动后会要求 带密码访问
-
-   启动成功:
-
-   ![image-20230817145731245](./assets/image-20230817145731245.png) 
-
-3. 访问prometheus UI
-
-   要求输入用户密码信息
-
-   ![image-20230817145854252](./assets/image-20230817145854252.png) 
-
-4. 访问prometheus http API接口
-
-   ![image-20230817150044916](./assets/image-20230817150044916.png)
-
-   带用户信息访问:
-
-   ![image-20230817150204288](./assets/image-20230817150204288.png)
-
----
-
-
-
-### 四:(重点配置)容器化部署如何添加basic auth
+### 三: (重点关注)容器化部署如何添加BasicAuth
 
 
 
@@ -102,27 +69,38 @@
 
 ![image-20230817170752121](./assets/image-20230817170752121.png)
 
-![image-20230817171100092](./assets/image-20230817171100092.png)
-
 如果需要给UI和 prometheus API 添加basic auth，那么该如何做呢？
 
 
 
-1.确认prom的版本信息，低版本的prometheus 不支持配置basic auth
+1. 确认prom的版本信息，低版本的prometheus 不支持配置basic auth
 
-![image-20230817171317031](./assets/image-20230817171317031.png)
+   ![image-20230817171317031](./assets/image-20230817171317031.png)
 
-存在该启动命令，即可配置basic auth。（之前踩过坑，2.10的prometheus 中没有该启动命令，导致配置了baisc auth后，prometheus 启动失败）
+   存在该启动命令，即可配置basic auth。（之前踩过坑，2.10的prometheus 中没有该启动命令，导致配置了baisc auth后，prometheus 启动失败）
 
 
 
-2. 创建configmap
+2. 创建configmap配置项
+
+   准备webconfig.yml文件
+
+   ```yml
+   basic_auth_users:
+     admin: $2b$12$kXxrZP74Fmjh6Wih0Ignu.uWSiojl5aKj4UnMvHN9s2h/Lc/ui0.S
+   ```
+
+   检测webconfig.yml是否可用: `promtool check web-config webconfig.yml`
+
+   ![image-20230825093808294](./assets/image-20230825093808294.png) 
 
    复用上述的webconfig.yml
 
    `kubectl  -n monitoring create configmap webconfig --from-file=webconfig.yml `
 
    ![image-20230817171736361](./assets/image-20230817171736361.png)
+
+   
 
 3. 将configmap挂载给prometheus 实例
 
@@ -161,7 +139,7 @@
 
    
 
-4. **修改探针配置(**如果有健康检查相关配置的话)
+4. 修改探针配置 (如果有健康检查相关配置的话)
 
    同时还需要检查prometheus负载 是否有存活探针livenessProbe,和就绪探针readinessProbe相关配置。如果配置了探针，则需要对探针信息进行修改，添加访问头信息。否则会报错:
 
@@ -170,6 +148,8 @@
    因为kubelet探针需要访问prometheus接口，进行存活和就绪检测。如果配置了httpGet探针，不对探针进行httpHeaders配置，就会引起pod不断重启，无法正常运行。
 
    ![image-20230824204620357](./assets/image-20230824204620357.png)
+
+   
 
    ⚠️⚠️**修改方式如下:**
 
@@ -198,6 +178,8 @@
 
    
 
+   
+
 5. 修改完成后，查看prometheus 实例状态。实例就绪
 
    ![image-20230824211132082](./assets/image-20230824211132082.png) 
@@ -220,7 +202,7 @@
 
    容器化部署的prometheus 修改逻辑其实和二进制相同。将对应的basic auth 信息传递给prometheus，然后启动加载就可以了。
 
-   期间踩过坑，版本低的prometheus 加载失败，会打印错误日志: ` unknow long flag '--web.config.file'`
+   ⚠️期间踩过坑，版本低的prometheus 加载失败，会打印错误日志: ` unknow long flag '--web.config.file'`
 
    ⚠️期间踩过坑, 如果prometheus在部署的时候配置了存活探针和就绪探针，不对探针进行httpHeaders的配置，则会造成prometheus实例无法正常运行。
 
@@ -230,7 +212,9 @@
 
 
 
-### 五: kube-prometheus形态添加basic auth
+### 四: kube-prometheus形态添加basic auth
+
+
 
 当前在k8s 部署prometheus 大都选择kube-prometheus这种形式，配置文件的变更都是交由crd进行管理。统一由prometheus-operator进行识别转换
 
@@ -362,7 +346,56 @@
 
 ---
 
+### 五：prometheus 二进制部署添加basic auth
+
+
+
+1. 创建webconfig.yml
+
+   ```yml
+   basic_auth_users:
+     admin: $2b$12$kXxrZP74Fmjh6Wih0Ignu.uWSiojl5aKj4UnMvHN9s2h/Lc/ui0.S
+   ```
+
+   ![image-20230817144833637](./assets/image-20230817144833637.png)
+
+
+
+2. 启动prometheus
+
+   `./prometheus  --web.config.file=webconfig.yml --config.file=prometheus.yml`
+
+   其中 --web.config.file=webconfig.yml 为关键配置，prometheus 启动后会要求 带密码访问
+
+   启动成功:
+
+   ![image-20230817145731245](./assets/image-20230817145731245.png) 
+
+3. 访问prometheus UI
+
+   要求输入用户密码信息
+
+   ![image-20230817145854252](./assets/image-20230817145854252.png) 
+
+4. 访问prometheus http API接口
+
+   ![image-20230817150044916](./assets/image-20230817150044916.png)
+
+   带用户信息访问:
+
+   ![image-20230817150204288](./assets/image-20230817150204288.png)
+
+   
+
+
+
+---
+
+
+
 ### 六: Grafana 如何对接鉴权之后的Prometheus
+
+
 
 正常来说，如果对Prometheus配置了Basic Auth后，所有需要访问Prometheus的组件均需做出调整，否则无法获取数据。Grafana也不例外
 
